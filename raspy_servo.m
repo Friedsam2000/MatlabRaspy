@@ -12,8 +12,8 @@ max_angle = 175;
 
 clf
 
-x = 0;
-y = 24;
+x = -13;
+y = 20;
 
 setEndPosition(front_servo, back_servo, x,y)
 plotRobotFromPosition(x,y);
@@ -79,7 +79,6 @@ function setEndPosition(front_servo, back_servo, x, y)
     
     %check if position is contained in reachable coordinates
     reachable_coordinates = getReachableCoordinates();
-    reachable_coordinates = floor(reachable_coordinates);
 
     
     if ~ismember([x,y], reachable_coordinates, 'rows')
@@ -100,19 +99,23 @@ function setEndPosition(front_servo, back_servo, x, y)
     alpha_sym = rad2deg(double(subs(alpha_eqn)));
     beta_sym = rad2deg(double(subs(beta_eqn)));
     
-    if beta_sym(1) < min_angle || beta_sym(1) > max_angle || alpha_sym(1) < min_angle || alpha_sym(1) > max_angle
-        disp('Endpoint not in available workspace');
-        return
+    if ~(beta_sym(1) < min_angle || beta_sym(1) > max_angle || alpha_sym(1) < min_angle || alpha_sym(1) > max_angle)
+        
+            setAngle(front_servo, beta_sym(1));
+            setAngle(back_servo,alpha_sym(1));
+    elseif ~(beta_sym(2) < min_angle || beta_sym(2) > max_angle || alpha_sym(2) < min_angle || alpha_sym(2) > max_angle)
+         setAngle(front_servo, beta_sym(2));
+         setAngle(back_servo,alpha_sym(2));
+        
+    else
+                disp('Endpoint not in available workspace');
+                return
     end
     
-    if ~isreal(beta_sym(1)) || ~isreal(alpha_sym(1))
-        disp('Endpoint not in available workspace');
-        return
-    end
+
         
 
-    setAngle(front_servo, beta_sym(1));
-    setAngle(back_servo,alpha_sym(1));
+
     
 end
 
@@ -134,6 +137,24 @@ function reachable_coordinates = getReachableCoordinates()
 
             x_2 = l_1 * cos(deg2rad(alpha)) + l_2*cos(deg2rad(alpha+beta)-pi/2);
             y_2 = l_1 * sin(deg2rad(alpha)) + l_2*sin(deg2rad(alpha+beta)-pi/2);
+            
+            if x_2 > 0
+                x_2 = floor(x_2);
+            end
+            
+            if x_2 < 0
+                x_2 = ceil(x_2);
+            end
+            
+            if y_2 > 0
+                y_2 = floor(y_2);
+            end
+            
+            if y_2 < 0
+                y_2 = ceil(y_2);
+            end
+            
+            
 
             reachable_coordinates(i,1) = x_2;
             reachable_coordinates(i,2) = y_2;
@@ -147,9 +168,7 @@ end
 
 function plotAvailableWorkspace()
     reachable_coordinates = getReachableCoordinates();
-    
-    reachable_coordinates = floor(reachable_coordinates);
-    
+        
     reachable_coordinates = unique(reachable_coordinates,'rows');
 
     
@@ -207,7 +226,7 @@ end
 
 function plotRobotFromPosition(x,y)
 
-    global l_1 l_2
+    global l_1 l_2 min_angle max_angle
 
     syms x_2 y_2 alpha_sym beta_sym
 
@@ -219,12 +238,22 @@ function plotRobotFromPosition(x,y)
     x_2 = x;
     y_2 = y;
     
-    alpha = rad2deg(double(subs(alpha_eqn)));
-    beta = rad2deg(double(subs(beta_eqn)));
+    alpha_sym = rad2deg(double(subs(alpha_eqn)));
+    beta_sym = rad2deg(double(subs(beta_eqn)));
 
 
-    alpha = alpha(1);
-    beta = beta(1);
+    if ~(beta_sym(1) < min_angle || beta_sym(1) > max_angle || alpha_sym(1) < min_angle || alpha_sym(1) > max_angle)
+        
+            beta = beta_sym(1);
+            alpha = alpha_sym(1);
+    elseif ~(beta_sym(2) < min_angle || beta_sym(2) > max_angle || alpha_sym(2) < min_angle || alpha_sym(2) > max_angle)
+            beta = beta_sym(2);
+            alpha = alpha_sym(2);
+        
+    else
+                disp('Endpoint not in available workspace');
+                return
+    end
 
     plotRobotFromAngles(alpha,beta)
 end
