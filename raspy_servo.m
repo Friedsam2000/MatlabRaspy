@@ -1,3 +1,5 @@
+clc
+clf
 
 %% check if raspy is connected, trys to connect
 
@@ -17,12 +19,6 @@ max_angle = 179;
 
 %% Main
 
-clf
-
-x = 0;
-y = 18;
-
-
 
 % setAngle(back_servo,180)
 plotRobotFromPosition(x,y);
@@ -33,8 +29,12 @@ plotAvailableWorkspace();
 
 
 %% function definitions
-function setAngle(servo, angle)
 
+%set the angle of a servo -> send to servo
+function setAngle(servo, angle)
+    
+    global min_angle max_angle
+    
     %offset for front servo
     if(servo.MaxPulseDuration == 0.00249)
         angle = 180 - angle;
@@ -48,15 +48,16 @@ function setAngle(servo, angle)
     
     position_with_offset = angle - offset;
     
-    position_with_offset = min(max(position_with_offset,0),180);
+    %make sure to not command an angle out of range
+    position_with_offset = min(max(position_with_offset,min_angle),max_angle);
    
-        
-    
-    %write position
+    %write position to servo
     servo.writePosition(position_with_offset);
     
 end
 
+%check if raspy is connected, if not try to connect, setup front_servo and
+%back servo
 function [r] = connectRaspy()
 
     global front_servo back_servo
@@ -81,6 +82,8 @@ function [r] = connectRaspy()
 
 end
 
+%try to set the angles of the servo according to a desired end-effector
+%position (integers), checks if position is in workspace
 function success = setEndPosition(x, y)
 
     global l_1 l_2 min_angle max_angle front_servo back_servo
@@ -90,8 +93,6 @@ function success = setEndPosition(x, y)
     
     %check if position is contained in reachable coordinates
     reachable_coordinates = getReachableCoordinates();
-
-    
     if ~ismember([x,y], reachable_coordinates, 'rows')
         disp('Endpoint not in available workspace');
         success = 0;
@@ -100,17 +101,21 @@ function success = setEndPosition(x, y)
     
     syms x_2 y_2 alpha_sym beta_sym
 
+    % equations for endeffector position
     e1= x_2 == l_1 * cos(alpha_sym) + l_2*cos(alpha_sym+beta_sym-pi/2);
     e2= y_2 == l_1 * sin(alpha_sym) + l_2*sin(alpha_sym+beta_sym-pi/2);
     
+    %solve analytically (could be replaced by numeric solver)
     [alpha_eqn,beta_eqn]=solve(e1,e2,alpha_sym,beta_sym);
-
+    
+    %plug in desired position of endefector and solve numerically for alpha
+    %and beta -> two solutions
     x_2 = x;
     y_2 = y;
-    
     alpha_sym = rad2deg(double(subs(alpha_eqn)));
     beta_sym = rad2deg(double(subs(beta_eqn)));
     
+    %pick solution that satisfies min max angle requirements
     if ~(beta_sym(1) < min_angle || beta_sym(1) > max_angle || alpha_sym(1) < min_angle || alpha_sym(1) > max_angle)
         
             setAngle(front_servo, beta_sym(1));
@@ -118,26 +123,17 @@ function success = setEndPosition(x, y)
     elseif ~(beta_sym(2) < min_angle || beta_sym(2) > max_angle || alpha_sym(2) < min_angle || alpha_sym(2) > max_angle)
              setAngle(front_servo, beta_sym(2));
              setAngle(back_servo,alpha_sym(2));
-    else
-                success = 0;
-                disp('Endpoint not in available workspace');
-                return
     end
     
     success = 1;
     return
     
-
-        
-
-
-    
 end
 
+%compute the worspace (reachable_coordinates of endeffector)
 function reachable_coordinates = getReachableCoordinates()
     
-    global min_angle max_angle l_1 l_2
-
+    global min_angle max_angle l_1 l_2 
     
     n = length(min_angle:1:max_angle)*2;
     
@@ -178,12 +174,6 @@ function reachable_coordinates = getReachableCoordinates()
                       continue
                   end
              end
-             
-             
-     
-
-          
-            
             
             reachable_coordinates(i,1) = x_2;
             reachable_coordinates(i,2) = y_2;
@@ -193,23 +183,19 @@ function reachable_coordinates = getReachableCoordinates()
     
     reachable_coordinates = unique( reachable_coordinates(:,[1 2]), 'rows');
 
-    
-
 end
 
+%plot workspace
 function plotAvailableWorkspace()
     reachable_coordinates = getReachableCoordinates();
-        
 
     f=figure(1);
     set(f,'WindowButtonDownFcn',@mytestcallback)
     scatter(reachable_coordinates(:,1), reachable_coordinates(:,2));
 
-    
-    
-    
 end
 
+%plot robot with configuration
 function plotRobotFromAngles(alpha,beta)
 
     global l_1 l_2
