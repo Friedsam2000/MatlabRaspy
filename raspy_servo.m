@@ -120,13 +120,18 @@ function success = setEndPosition(x, y)
         
             setAngle(front_servo, beta_sym(1));
             setAngle(back_servo,alpha_sym(1));
+            success = 1;
+
     elseif ~(beta_sym(2) < min_angle || beta_sym(2) > max_angle || alpha_sym(2) < min_angle || alpha_sym(2) > max_angle)
              setAngle(front_servo, beta_sym(2));
              setAngle(back_servo,alpha_sym(2));
+             success = 1;
+
+    else
+        success = 0;
+    
     end
     
-    success = 1;
-    return
     
 end
 
@@ -265,18 +270,16 @@ function plotRobotFromPosition(x,y)
 
     if ~(beta_sym(1) < min_angle || beta_sym(1) > max_angle || alpha_sym(1) < min_angle || alpha_sym(1) > max_angle)
         
-            beta = beta_sym(1);
-            alpha = alpha_sym(1);
+            plotRobotFromAngles(alpha_sym(1),beta_sym(1))
+
     elseif ~(beta_sym(2) < min_angle || beta_sym(2) > max_angle || alpha_sym(2) < min_angle || alpha_sym(2) > max_angle)
-            beta = beta_sym(2);
-            alpha = alpha_sym(2);
         
+            plotRobotFromAngles(alpha_sym(2),beta_sym(2))
+
     else
                 disp('Endpoint not in available workspace');
-                return
     end
 
-    plotRobotFromAngles(alpha,beta)
 end
 
 function mytestcallback(x, ysrc,~)
