@@ -8,7 +8,6 @@ global l_1 l_2 min_angle max_angle front_servo back_servo
 
 [r] = connectRaspy();
 
-
 l_1 = 9;
 l_2 = 9;
 min_angle = 1;
@@ -16,16 +15,11 @@ max_angle = 179;
 
 
 
-
 %% Main
 
 
-% setAngle(back_servo,180)
-plotRobotFromPosition(x,y);
+plotRobotFromPosition(0,l_1*2);
 plotAvailableWorkspace();
-
-
-
 
 
 %% function definitions
@@ -241,7 +235,7 @@ function plotRobotFromAngles(alpha,beta)
     axis equal
     grid on
     xlim([-2*l_2 2*l_2])
-    ylim([-2*l_2 2*l_2])
+    ylim([-1 2*l_2+1])
 
     %Print joint angles
     caption = sprintf('alpha = %.1f, beta = %.1f        x = %.2f, y = %.2f', rad2deg(alpha), rad2deg(beta), x_2, y_2);
