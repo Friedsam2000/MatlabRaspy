@@ -9,8 +9,8 @@ global l_1 l_2 min_angle max_angle front_servo back_servo
 
 l_1 = 9;
 l_2 = 9;
-min_angle = 5;
-max_angle = 175;
+min_angle = 1;
+max_angle = 179;
 
 
 
@@ -149,22 +149,39 @@ function reachable_coordinates = getReachableCoordinates()
              x_2 = l_1 * cosd(alpha) + l_2*cosd(alpha+beta-90);
              y_2 = l_1 * sind(alpha) + l_2*sind(alpha+beta-90);
             
-             if x_2 > 0
-                 x_2 = floor(x_2);
+             if abs(beta-90) < 45
+                 if x_2 > 0
+                     x_2 = floor(x_2);
+                 end
+                 if x_2 < 0
+                     x_2 = ceil(x_2);
+                 end
+
+                  if y_2 > 0
+                      y_2 = floor(y_2);
+                  end
+                  if y_2 < 0
+                      continue
+                 end
+             else
+                 if x_2 > 0
+                     x_2 = ceil(x_2);
+                 end
+                 if x_2 < 0
+                     x_2 = floor(x_2);
+                 end
+
+                  if y_2 > 0
+                      y_2 = ceil(y_2);
+                  end
+                  if y_2 < 0
+                      continue
+                  end
              end
              
-             if x_2 < 0
-                 x_2 = ceil(x_2);
-             end
              
-              if y_2 > 0
-                 y_2 = floor(y_2);
-             end
-             
-             if y_2 < 0
-                 y_2 = ceil(y_2);
-             end
-                 
+     
+
           
             
             
