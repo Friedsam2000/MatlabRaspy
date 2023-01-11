@@ -32,24 +32,29 @@ classdef robot < handle
                     obj.back_servo.MinPulseDuration = 0.0005;
                     
                     obj.calculateWorkspace;
-                    obj.setEndeffektorPosition(0,obj.length_back+obj.length_front);
+                    obj.setAngleBack(90);
+                    obj.setAngleFront(0);
                     disp("Set initial position");
-                    disp("Please use the the setOffset method to calibrate the initial position", ...
-                         "Until the arm is fully stretched straight forward");
+                    disp("Please use the the setOffset method to calibrate the initial position Until the arm is fully stretched straight forward");
                     
               else
                   disp("raspi already connected")
               end
         end
         
-        function obj = setFrontAngle(obj, angle)
+        function obj = setAngleFront(obj, angle)
             %this function tries to set the angle of the front servo and
             %sets q(2)
             
-            
-            if angle > obj.max_angles.front_servo || angle < obj.min_angles.front_servo
-                disp("Front Angle could not be set, out of range");
+            %check if servo is connected
+            if isnumeric(obj.back_servo)
+                disp("servo is not connected, please run connectRaspi");
                 return
+            end
+            
+            %check if commanded angle is within bounds
+            if angle > obj.max_angles.front_servo || angle < obj.min_angles.front_servo
+                disp("Warning: Front Angle out of bounds, limiting");
             end
             
             %subtract offset
@@ -62,30 +67,36 @@ classdef robot < handle
             obj.q(2) = deg2rad(angle_with_offset);
 
             %write position to servo (convert angle for servo)
-            obj.front_servo.writePosition(90+angle_with_offset);
+            obj.front_servo.writePosition(90-angle_with_offset);
     
         end
         
-        function obj = setBackAngle(obj, angle)
+        function obj = setAngleBack(obj, angle)
             %this function tries to set the angle of the back servo and
             %sets q(1)
             
-            if angle > obj.max_angles.back_servo || angle < obj.min_angles.back_servo
-                disp("Back Angle could not be set, out of range");
+            %check if servo is connected
+            if isnumeric(obj.back_servo)
+                disp("servo is not connected, please run connectRaspi");
                 return
             end
             
+            %check if  angle is within bounds, give warning
+            if angle > obj.max_angles.back_servo || angle < obj.min_angles.back_servo
+                disp("Warning: Back Angle out of bounds, limiting");
+            end
+
             %subtract offset
             angle_with_offset = angle - obj.offsets.back_servo;
 
             %min max the angle with offset to max range
-            angle_with_offset = min(max(angle_with_offset,obj.min_angles.back_servo),obj.min_angles.back_servo);
+            angle_with_offset = min(max(angle_with_offset,obj.min_angles.back_servo),obj.max_angles.back_servo);
 
             %set property
             obj.q(1) = deg2rad(angle_with_offset);
 
             %write position to servo
-            obj.front_servo.writePosition(angle_with_offset);
+            obj.back_servo.writePosition(angle_with_offset);
            
     
         end
@@ -123,15 +134,23 @@ classdef robot < handle
 
         end
         
-        function obj = setOffset(offset_front,offset_back)
+        function obj = setOffsetFront(obj,offset_front)
             
             obj.offsets.front_servo = offset_front;
-            obj.offsets.back_srevo = offset_back;
+
             
-            obj.setEndeffektorPosition(0,obj.length_back+obj.length_front);
+            obj.setAngleFront(0);
             disp("Reset initial position");
             
+        end
+        
+        function obj = setOffsetBack(obj,offset_back)
             
+
+            obj.offsets.back_servo = offset_back;
+            
+            obj.setAngleBack(90)
+            disp("Reset initial position");
             
         end
         
@@ -174,18 +193,20 @@ classdef robot < handle
                 disp("Point not in calculated workspace");
                 return
             end
+            
+            %Define Variables
+            L_1 = obj.length_back;
+            L_2 = obj.length_front;
+            XE = x_EE;
+            YE = y_EE;
+            
+            %IK equations from https://de.mathworks.com/help/symbolic/derive-and-apply-inverse-kinematics-to-robot-arm.html
+            q_1_calc(1) = atan((L_1.*YE.*2.0-(L_1.^2.*sqrt((-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0).*(L_1.^2+L_2.^2-XE.^2-YE.^2+L_1.*L_2.*2.0)))./(-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0)-(L_2.^2.*sqrt((-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0).*(L_1.^2+L_2.^2-XE.^2-YE.^2+L_1.*L_2.*2.0)))./(-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0)+(XE.^2.*sqrt((-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0).*(L_1.^2+L_2.^2-XE.^2-YE.^2+L_1.*L_2.*2.0)))./(-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0)+(YE.^2.*sqrt((-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0).*(L_1.^2+L_2.^2-XE.^2-YE.^2+L_1.*L_2.*2.0)))./(-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0)+(L_1.*L_2.*sqrt((-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0).*(L_1.^2+L_2.^2-XE.^2-YE.^2+L_1.*L_2.*2.0)).*2.0)./(-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0))./(L_1.*XE.*2.0+L_1.^2-L_2.^2+XE.^2+YE.^2)).*2.0;
+            q_1_calc(2) = atan(sqrt((-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0).*(L_1.^2+L_2.^2-XE.^2-YE.^2+L_1.*L_2.*2.0))./(-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0)).*-2.0;
 
-            a1 = obj.length_back;
-            a2 = obj.length_front;
+            q_2_calc(1) = atan((L_1.*YE.*2.0+(L_1.^2.*sqrt((-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0).*(L_1.^2+L_2.^2-XE.^2-YE.^2+L_1.*L_2.*2.0)))./(-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0)+(L_2.^2.*sqrt((-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0).*(L_1.^2+L_2.^2-XE.^2-YE.^2+L_1.*L_2.*2.0)))./(-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0)-(XE.^2.*sqrt((-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0).*(L_1.^2+L_2.^2-XE.^2-YE.^2+L_1.*L_2.*2.0)))./(-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0)-(YE.^2.*sqrt((-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0).*(L_1.^2+L_2.^2-XE.^2-YE.^2+L_1.*L_2.*2.0)))./(-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0)-(L_1.*L_2.*sqrt((-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0).*(L_1.^2+L_2.^2-XE.^2-YE.^2+L_1.*L_2.*2.0)).*2.0)./(-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0))./(L_1.*XE.*2.0+L_1.^2-L_2.^2+XE.^2+YE.^2)).*2.0;
+            q_2_calc(2) = atan(sqrt((-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0).*(L_1.^2+L_2.^2-XE.^2-YE.^2+L_1.*L_2.*2.0))./(-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0)).*2.0;
             
-            x = x_EE;
-            y = y_EE;
-            
-            q_1_calc(2) = acos((x^2 + y^2 - a1^2-a2^2)/(2*a1*a2));
-            q_1_calc(1) = atan(y/x) - atan((a2*sin(q_1_calc(2)))/(a1+a2*cos(q_1_calc(2))));
-            
-            q_2_calc(2) = -acos((x^2+y^2-a1^2-a2^2)/(2*a1*a2));
-            q_2_calc(1) = atan(y/x) + atan((a2*sin(q_2_calc(2)))/(a1+a2*cos(q_2_calc(2))));
         end
         
         function setEndeffektorPosition(obj,x_EE,y_EE)
@@ -200,8 +221,8 @@ classdef robot < handle
             [q_1, ~] = obj.inverseKinematics(x_EE,y_EE);
             
             % Set the calculated angles
-            obj.setFrontAngle(q_1(2))
-            obj.setBackAngle(q_1(2))
+            obj.setAngleFront(rad2deg(q_1(2)));
+            obj.setAngleBack(rad2deg(q_1(1)));
             
         end
         
