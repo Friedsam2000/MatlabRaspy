@@ -46,6 +46,7 @@ classdef robot < handle
             %this function tries to set the angle of the front servo and
             %sets q(2)
             
+            
             %check if servo is connected
             if isnumeric(obj.back_servo)
                 disp("servo is not connected, please run connectRaspi");
@@ -217,12 +218,21 @@ classdef robot < handle
                 return
             end
             
-            % Calculate IK, ignore second solution
-            [q_1, ~] = obj.inverseKinematics(x_EE,y_EE);
+            % Calculate IK
+            [q_1_calc, q_2_calc] = obj.inverseKinematics(x_EE,y_EE);
             
+            %check if q_1 is out of bounds
+            %check if commanded angle is within bounds
+            if rad2deg(q_1_calc(1)) > obj.max_angles.back_servo || rad2deg(q_1_calc(1)) < obj.min_angles.back_servo || rad2deg(q_1_calc(2)) > obj.max_angles.front_servo || rad2deg(q_1_calc(2)) < obj.min_angles.front_servo
+                disp("using alterative solution");
+                obj.setAngleFront(rad2deg(q_2_calc(2)));
+                obj.setAngleBack(rad2deg(q_2_calc(1)));
+            else
             % Set the calculated angles
-            obj.setAngleFront(rad2deg(q_1(2)));
-            obj.setAngleBack(rad2deg(q_1(1)));
+                obj.setAngleFront(rad2deg(q_1_calc(2)));
+                obj.setAngleBack(rad2deg(q_1_calc(1)));
+            end
+
             
         end
         
@@ -258,7 +268,7 @@ classdef robot < handle
             axis equal
             grid on
             xlim([-2*obj.length_front 2*obj.length_front])
-            ylim([-1 2*obj.length_front+1])
+            ylim([-obj.length_front 2*obj.length_front+1])
 
             %Print joint angles
             caption = sprintf('alpha = %.1f, beta = %.1f        x = %.2f, y = %.2f', rad2deg(obj.q(1)), rad2deg(obj.q(2)), x_EE, y_EE);
@@ -274,10 +284,35 @@ classdef robot < handle
                 disp("workspace not calculated, run calculateWorkspace first");
                 return
             end
-            
+            f=figure(1);
+            set(f,'WindowButtonDownFcn',@obj.mytestcallback)
             plot(obj.workspace(:,1),obj.workspace(:,2));
+            
+        end
+        
+                
+        function mytestcallback(obj,x, ysrc,~)
+    
+            pt = get(gca,'CurrentPoint');
+            fprintf('Clicked: %.1f %.1f\n', pt(1,1), pt(1,2));
+            
+            obj.setEndeffektorPosition(pt(1,1),pt(1,2));
+            plotRobotInWorkspace(obj)
+    
+        end
+        
+        function plotRobotInWorkspace(obj)
+            
+            hold off
+            obj.plotWorkspace
+            hold on
+            obj.plotRobot
             
         end
 
     end
 end
+
+
+        
+
