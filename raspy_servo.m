@@ -16,10 +16,13 @@ max_angle = 179;
 
 
 %% Main
+% 
+% setEndPosition(0,l_1*2);
+% plotRobotFromPosition(0,l_1*2);
+% plotAvailableWorkspace();
 
-
-plotRobotFromPosition(0,l_1*2);
-plotAvailableWorkspace();
+setAngle(front_servo,90)
+setAngle(back_servo,90)
 
 
 %% function definitions
@@ -32,12 +35,13 @@ function setAngle(servo, angle)
     %offset for front servo
     if(servo.MaxPulseDuration == 0.00249)
         angle = 180 - angle;
-        offset =-5;
+        
+        offset = 0;
     end
     
     %offset for back servo
     if(servo.MaxPulseDuration == 0.00250)
-        offset=-1;
+        offset= 3;
     end
     
     position_with_offset = angle - offset;
