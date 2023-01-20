@@ -76,9 +76,9 @@ classdef robotArm < handle
         end
         
         %% Interaction  
-        function setEndeffektorPosition_PD_Controller(obj,x_EE,y_EE,P)
+        function setEndeffektorPosition_P_Controller(obj,x_EE,y_EE,P)
             %Set the endeffektor Position of the robot using the pinv of jacobian (experimental)
-            % Using a PD Controller. Good Values: P = 0.2 D = 0.05
+            % Using a P Controller
             % This method does not require an analytical solution to the
             % inverse kinematic.
             
@@ -92,10 +92,10 @@ classdef robotArm < handle
             tolerance = 0.1; %cm
             
             %Defines the control loop frequency f = 1/dt
-            dt = 0.1; %s
+            dt = 0.01; %s
             
             %Defines the max time befor it aborts
-            max_convergence_time = 5;
+            max_convergence_time = 0.5;
             
             %Control loop
             obj.robot_busy = 1; 
@@ -126,7 +126,7 @@ classdef robotArm < handle
                 %Calculate the Control error
                 position_error = [x_EE-x_Cur; y_EE-y_Cur];
                 
-                %PD Controller
+                %P Controller
                 x_dot = P*position_error; %Desired task space velocity
                         
                 %Convert to Joint Space
@@ -370,7 +370,7 @@ classdef robotArm < handle
             fprintf('Clicked: %.1f %.1f\n', pt(1,1), pt(1,2));
             if ~ obj.robot_busy
                 if obj.control_mode
-                        obj.setEndeffektorPosition_PD_Controller(pt(1,1),pt(1,2),1); %PD Mode
+                        obj.setEndeffektorPosition_P_Controller(pt(1,1),pt(1,2),15); %P Mode
                 else
                         obj.setEndeffektorPosition_Analytic(pt(1,1),pt(1,2)); %Analytical mode
                 end
