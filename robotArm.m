@@ -10,20 +10,34 @@ classdef robotArm < handle
         length_back = 9; %the length (cm) of the first segment
         length_front = 9 %the length (cm) of the second segment
         workspace = 0; % define a workspace (consisting of boundary coordinates) dimension (k,2)
-        q = [pi/2; 0]; % joint configuration, q(1) --> back_servo, q(2) --> front_servo
         offsets = struct("back_servo",0,"front_servo",0); % the angular offsets (deg) for both servos, configure at start
         workspaceFigure = struct("WindowState",'closed');
+        robot_busy = 0;
+        
         
     end  
+    
+    properties (SetObservable)
+        q; % joint configuration, q(1) --> back_servo, q(2) --> front_servo
+    end
+        
     
     methods
         
         %% Constructor
-        function obj = robotArm()
-            %connect raspi on initialisiation
-            
+        function obj = robotArm(evtobj)
+            obj.q =[pi/3; pi/3];
             obj.connectRaspi();
+            addlistener(obj,'q','PostSet',@(src,evt) obj.qChangedCallback(src,evt));
         end
+
+        
+        function qChangedCallback(obj,src,evt)
+            
+            obj.updateRobotInPlot;
+        end
+
+
         
         
         %% Methods
@@ -40,7 +54,6 @@ classdef robotArm < handle
                     obj.front_servo.MinPulseDuration = 0.0005;
                     obj.back_servo.MaxPulseDuration = 0.00250;
                     obj.back_servo.MinPulseDuration = 0.0005;    
-                    disp("Please use the the setOffset method to calibrate the initial position Until the arm is fully stretched straight forward");
                     
                     catch ME
                         disp(ME.message)
@@ -49,9 +62,9 @@ classdef robotArm < handle
                     
                     fprintf("--------------------------------------------------------------------------------------------------------------\n");
                     obj.calculateWorkspace;
-                    obj.setAngleBack(90);
-                    obj.setAngleFront(0);
-                    disp("Set initial position: q = [pi/2; 0];");
+                    obj.setAngleBack(rad2deg(pi/3));
+                    obj.setAngleFront(rad2deg(pi/3));
+                    disp("Set initial position (no singularity): q = [pi/3; pi/3];");
                     obj.plotRobotInWorkspace;
               else
                   disp("raspi already connected")
@@ -87,7 +100,6 @@ classdef robotArm < handle
                 obj.front_servo.writePosition(90-angle_with_offset);
             end
             
-            obj.plotRobotInWorkspace;
     
         end
         
@@ -117,7 +129,6 @@ classdef robotArm < handle
                 obj.back_servo.writePosition(angle_with_offset);
             end
             
-            obj.plotRobotInWorkspace;
 
     
         end
@@ -160,18 +171,14 @@ classdef robotArm < handle
             
             obj.offsets.front_servo = offset_front;
 
-            
-            obj.setAngleFront(0);
-            disp("Reset initial position");
+
         end
         
         function obj = setOffsetBack(obj,offset_back)
             %Set the offset for the back servo
             
             obj.offsets.back_servo = offset_back;
-            
-            obj.setAngleBack(90)
-            disp("Reset initial position");
+
         end
         
         function inWorkspace = checkInWorkspace(obj,x,y)
@@ -264,20 +271,28 @@ classdef robotArm < handle
             [x_EE,y_EE] = obj.forwardKinematics(obj.q);
 
             %Plot first segment
-            plot([0 x_1], [0 y_1],'r')
+            first_segment = plot([0 x_1], [0 y_1],'r');
+            set(first_segment,'Tag','first_segment');
             hold on
             %Plot second segment
-            plot([x_1 x_EE], [y_1 y_EE],'b')
+            second_segment = plot([x_1 x_EE], [y_1 y_EE],'b');
+            set(second_segment,'Tag','second_segment');
+
             %Plot Joints
             plot(0,0,'-o','MarkerSize',8,...
                 'MarkerEdgeColor','black',...
-                'MarkerFaceColor','black')
-            plot(x_1,y_1,'-o','MarkerSize',8,...
+                'MarkerFaceColor','black');
+            
+            endpoint_1 = plot(x_1,y_1,'-o','MarkerSize',8,...
                 'MarkerEdgeColor','black',...
-                'MarkerFaceColor','black')
-            plot(x_EE,y_EE,'-o','MarkerSize',8,...
+                'MarkerFaceColor','black');
+            set(endpoint_1,'Tag','endpoint_1');
+
+            endpoint_2 = plot(x_EE,y_EE,'-o','MarkerSize',8,...
                 'MarkerEdgeColor','green',...
-                'MarkerFaceColor','green')
+                'MarkerFaceColor','green');
+            set(endpoint_2,'Tag','endpoint_2');
+
 
             %Plot settings
             axis equal
@@ -288,6 +303,7 @@ classdef robotArm < handle
             %Print joint angles
             caption = sprintf('q_1 = %.1f °, q_2 = %.1f °       x_E_E = %.2f cm, y_E_E = %.2f cm', rad2deg(obj.q(1)), rad2deg(obj.q(2)), x_EE, y_EE);
             title(caption);
+  
             
             %Print text
             text(0, -0.9*obj.length_back, 'Click in the workspace to move the robot', ...
@@ -315,9 +331,12 @@ classdef robotArm < handle
     
             pt = get(gca,'CurrentPoint');
             fprintf('Clicked: %.1f %.1f\n', pt(1,1), pt(1,2));
-%             obj.setEndeffektorPosition_PD_Controller(pt(1,1),pt(1,2),0.2,0.05); %PD Mode
-            obj.setEndeffektorPosition_Analytic(pt(1,1),pt(1,2)); %Analytical mode
-            plotRobotInWorkspace(obj);
+            if ~ obj.robot_busy
+                obj.setEndeffektorPosition_PD_Controller(pt(1,1),pt(1,2),1); %PD Mode
+    %             obj.setEndeffektorPosition_Analytic(pt(1,1),pt(1,2)); %Analytical mode
+            else
+                disp("Robot busy");
+            end
         end
         
         function plotRobotInWorkspace(obj)
@@ -335,10 +354,8 @@ classdef robotArm < handle
             step_size = 0.5; % cm
             for x = x_start:step_size:x_end
                 
-                obj.setEndeffektorPosition(x,y);
-                
-                obj.plotRobot
-                drawnow
+                obj.setEndeffektorPosition_Analytic(x,y);
+
                 
             end
             
@@ -356,7 +373,7 @@ classdef robotArm < handle
                   l_1*cos(alpha)+l_2*cos(alpha+beta), l_2*cos(alpha+beta)];
         end
         
-        function setEndeffektorPosition_PD_Controller(obj,x_EE,y_EE,P,D)
+        function setEndeffektorPosition_PD_Controller(obj,x_EE,y_EE,P)
             %Set the endeffektor Position of the robot using the pinv of jacobian (experimental)
             % Using a PD Controller. Good Values: P = 0.2 D = 0.05
             % This method does not require an analytical solution to the
@@ -368,15 +385,18 @@ classdef robotArm < handle
                 return
             end
             
-            %start a controll loop that finishes when the current Endeffektor position
-            %is within a certain tolerance of the desired Endeffektor
-            %position
             
             tolerance = 0.1; %cm
             
-            position_error_last_loop = 0;
+            %Defines the control loop frequency f = 1/dt
+            dt = 0.1; %s
             
+            %Defines the max time befor it aborts
+            max_convergence_time = 5;
             
+            %Control loop
+            obj.robot_busy = 1; 
+            t = 0;
             while 1
                 
                 %compute current endeffektor pos
@@ -385,42 +405,78 @@ classdef robotArm < handle
                 %compute distance
                 distance = sqrt((x_Cur-x_EE)^2+(y_Cur-y_EE)^2);
                 
+                
                 %stop when position is in tolerance
                 if (distance < tolerance)
+                    obj.robot_busy = 0;
                     disp("Desired Endeffetor Position Reached");
                     break;
                 end
-                       
-                %Move the endeffektor in the direction of the desired
-                %position using the inverse Jacobian
-                % x_dot = J * q_dot --> q_dot = pinv(J) * x_dot
+                
+                %Stop when max time has passed
+                if (t>max_convergence_time)
+                    obj.robot_busy = 0;
+                    disp("Did not converge in time");
+                    break;
+                end
                 
                 %Calculate the Control error
                 position_error = [x_EE-x_Cur; y_EE-y_Cur];
                 
                 %PD Controller
-                x_dot = P*position_error + D * (position_error-position_error_last_loop);
+                x_dot = P*position_error; %Desired task space velocity
                         
                 %Convert to Joint Space
                 J = obj.getJacobian();  
-                q_dot = pinv(J) * x_dot;
+                q_dot = pinv(J) * x_dot; %Desired joint space velocity
                 
-                %Set the updated Angles
-                obj.setAngleBack(rad2deg(obj.q(1)+q_dot(1)));
-                obj.setAngleFront(rad2deg(obj.q(2)+q_dot(2)));
-                 
-                %Safe the last position error
-                position_error_last_loop = position_error;
-                
-                drawnow
-                disp("Distance to goal");
-                disp(distance)
-                
+                %Set the updated Angles by integrating the desired joint
+                %space velocity
+                obj.setAngleBack(rad2deg(obj.q(1)+dt*q_dot(1)));
+                obj.setAngleFront(rad2deg(obj.q(2)+dt*q_dot(2)));
+                    
+                %Propagate real and simulated time
+                pause(dt);
+                t = t + dt;
 
             end
 
         end
+        
+        function updateRobotInPlot(obj)
+            
+            %Position of first joint 
+            x_1 = obj.length_back*cos(obj.q(1));
+            y_1 = obj.length_back*sin(obj.q(1));
+
+            %position of the second joint
+            [x_EE,y_EE] = obj.forwardKinematics(obj.q);
+            
+            %Get the handles of the robot graphics
+            endpoint_1 = findobj(gca, 'Tag', 'endpoint_1');
+            endpoint_2 = findobj(gca, 'Tag', 'endpoint_2');
+            first_segment = findobj(gca, 'Tag', 'first_segment');
+            second_segment = findobj(gca, 'Tag', 'second_segment');
+            
+            %Get handle of title
+            title_handle = get(gca, 'title');
+            
+            
+            %Update the robot graphics with the new position
+            set(endpoint_1,'XData',x_1,'YData',y_1);
+            set(endpoint_2,'XData',x_EE,'YData',y_EE);
+            set(first_segment, 'XData',[0 x_1], 'YData',[0 y_1]);
+            set(second_segment, 'XData',[x_1 x_EE], 'YData',[y_1 y_EE]);
+            
+            set(title_handle,'string',sprintf('q_1 = %.1f °, q_2 = %.1f °       x_E_E = %.2f cm, y_E_E = %.2f cm', rad2deg(obj.q(1)), rad2deg(obj.q(2)), x_EE, y_EE))
+            
+            drawnow
+            
+        end
+        
+
     end
+
 end
 
 
