@@ -26,7 +26,7 @@ classdef robotArm < handle
         end
         
         
-        %% Methods that change the robots properties
+        %% Methods
         function obj = connectRaspi(obj)
             %This function tries to connect to the raspi and sets r,
             %front_servo, back_servo
@@ -174,7 +174,6 @@ classdef robotArm < handle
             disp("Reset initial position");
         end
         
-        %% Methods that don't change the robots properties
         function inWorkspace = checkInWorkspace(obj,x,y)
             %Checks if a given point is located inside the
             %calculated workspace
@@ -226,7 +225,7 @@ classdef robotArm < handle
             q_2_calc(2) = atan(sqrt((-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0).*(L_1.^2+L_2.^2-XE.^2-YE.^2+L_1.*L_2.*2.0))./(-L_1.^2-L_2.^2+XE.^2+YE.^2+L_1.*L_2.*2.0)).*2.0;
         end
         
-        function setEndeffektorPosition(obj,x_EE,y_EE)
+        function setEndeffektorPosition_Analytic(obj,x_EE,y_EE)
             %Set the endeffektor Position of the robot using inverse
             %Kinematics, checks if point is in workspace first
             
@@ -254,7 +253,6 @@ classdef robotArm < handle
             
         end
         
-        %% Methods for plotting
         function plotRobot(obj)
             %Plot the robot
             
@@ -311,14 +309,14 @@ classdef robotArm < handle
             end
             plot(obj.workspace(:,1),obj.workspace(:,2));
         end
-        
-                
+         
         function pointClickCallback(obj,~, ~,~)
             %A callback when the workspace figure is clicked
     
             pt = get(gca,'CurrentPoint');
             fprintf('Clicked: %.1f %.1f\n', pt(1,1), pt(1,2));
-            obj.setEndeffektorPosition(pt(1,1),pt(1,2));
+%             obj.setEndeffektorPosition_PD_Controller(pt(1,1),pt(1,2),0.2,0.05); %PD Mode
+            obj.setEndeffektorPosition_Analytic(pt(1,1),pt(1,2)); %Analytical mode
             plotRobotInWorkspace(obj);
         end
         
@@ -332,7 +330,7 @@ classdef robotArm < handle
         end
         
         function followLine(obj,x_start,x_end,y)
-            
+            %Follow a horizontal line
             
             step_size = 0.5; % cm
             for x = x_start:step_size:x_end
@@ -344,6 +342,83 @@ classdef robotArm < handle
                 
             end
             
+        end
+        
+        function J = getJacobian(obj)
+            %Calculates the jacobian (x_dot = J*q_dot)
+        
+            l_1 = obj.length_back;
+            l_2 = obj.length_front;
+            alpha = obj.q(1);
+            beta = obj.q(2);
+            
+            J = [-l_1*sin(alpha)-l_2*sin(alpha+beta),-l_2*sin(alpha+beta);
+                  l_1*cos(alpha)+l_2*cos(alpha+beta), l_2*cos(alpha+beta)];
+        end
+        
+        function setEndeffektorPosition_PD_Controller(obj,x_EE,y_EE,P,D)
+            %Set the endeffektor Position of the robot using the pinv of jacobian (experimental)
+            % Using a PD Controller. Good Values: P = 0.2 D = 0.05
+            % This method does not require an analytical solution to the
+            % inverse kinematic.
+            
+            % Check if point is in workspace
+            if ~obj.checkInWorkspace(x_EE,y_EE)
+                disp("Point not in calculated workspace");
+                return
+            end
+            
+            %start a controll loop that finishes when the current Endeffektor position
+            %is within a certain tolerance of the desired Endeffektor
+            %position
+            
+            tolerance = 0.1; %cm
+            
+            position_error_last_loop = 0;
+            
+            
+            while 1
+                
+                %compute current endeffektor pos
+                [x_Cur, y_Cur] = obj.forwardKinematics(obj.q);
+                
+                %compute distance
+                distance = sqrt((x_Cur-x_EE)^2+(y_Cur-y_EE)^2);
+                
+                %stop when position is in tolerance
+                if (distance < tolerance)
+                    disp("Desired Endeffetor Position Reached");
+                    break;
+                end
+                       
+                %Move the endeffektor in the direction of the desired
+                %position using the inverse Jacobian
+                % x_dot = J * q_dot --> q_dot = pinv(J) * x_dot
+                
+                %Calculate the Control error
+                position_error = [x_EE-x_Cur; y_EE-y_Cur];
+                
+                %PD Controller
+                x_dot = P*position_error + D * (position_error-position_error_last_loop);
+                        
+                %Convert to Joint Space
+                J = obj.getJacobian();  
+                q_dot = pinv(J) * x_dot;
+                
+                %Set the updated Angles
+                obj.setAngleBack(rad2deg(obj.q(1)+q_dot(1)));
+                obj.setAngleFront(rad2deg(obj.q(2)+q_dot(2)));
+                 
+                %Safe the last position error
+                position_error_last_loop = position_error;
+                
+                drawnow
+                disp("Distance to goal");
+                disp(distance)
+                
+
+            end
+
         end
     end
 end
