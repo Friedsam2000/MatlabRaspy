@@ -1,16 +1,16 @@
 classdef robotArm < handle
     properties (SetAccess=protected, GetAccess=public)
-        
+        r 
         %Read Only 
         raspberryPi = 0;
         front_servo = 0;
         back_servo = 0;
         min_angles = struct("back_servo",1,"front_servo",-89); % the minimum servo angles
         max_angles = struct("back_servo",179,"front_servo",89); % the minimum servo angles
-        length_back = 15; %the length (cm) of the first segment
-        length_front = 8 %the length (cm) of the second segment
+        length_back = 9; %the length (cm) of the first segment
+        length_front = 9 %the length (cm) of the second segment
         workspace = 0; % define a workspace (consisting of boundary coordinates) dimension (k,2)
-        q; % joint configuration, q(1) --> back_servo, q(2) --> front_servo
+        q = [pi/2; 0]; % joint configuration, q(1) --> back_servo, q(2) --> front_servo
         offsets = struct("back_servo",0,"front_servo",0); % the angular offsets (deg) for both servos, configure at start
         workspaceFigure = struct("WindowState",'closed');
         
@@ -86,6 +86,8 @@ classdef robotArm < handle
             if ~isnumeric(obj.back_servo)
                 obj.front_servo.writePosition(90-angle_with_offset);
             end
+            
+            obj.plotRobotInWorkspace;
     
         end
         
@@ -114,6 +116,9 @@ classdef robotArm < handle
             if ~isnumeric(obj.back_servo)
                 obj.back_servo.writePosition(angle_with_offset);
             end
+            
+            obj.plotRobotInWorkspace;
+
     
         end
         
@@ -122,7 +127,7 @@ classdef robotArm < handle
             %endeffektor can reach, sets workspace
             
             
-                step_size = 1; %deg
+                step_size = 1; %mm
 
                 n_reachable_coordinates = length(obj.min_angles.back_servo:step_size:obj.max_angles.back_servo)...
                     *length(obj.min_angles.front_servo:step_size:obj.max_angles.front_servo);
@@ -324,6 +329,21 @@ classdef robotArm < handle
             obj.plotWorkspace;
             hold on
             obj.plotRobot;         
+        end
+        
+        function followLine(obj,x_start,x_end,y)
+            
+            
+            step_size = 0.5; % cm
+            for x = x_start:step_size:x_end
+                
+                obj.setEndeffektorPosition(x,y);
+                
+                obj.plotRobot
+                drawnow
+                
+            end
+            
         end
     end
 end
