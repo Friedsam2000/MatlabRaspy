@@ -10,9 +10,8 @@ classdef robotArm < handle
         length_front = 9 %the length (cm) of the second segment
         workspace = 0; % define a workspace (consisting of boundary coordinates) dimension (k,2)
         workspace_figure = struct("WindowState",'closed');
-        robot_busy = 0;
         raspberry_pi = 0;
-        
+        desired_position_counter = 0;
 
     end 
     
@@ -98,8 +97,10 @@ classdef robotArm < handle
             max_convergence_time = 0.5;
             
             %Control loop
-            obj.robot_busy = 1; 
             t = 0;
+            
+            %get current desired position count
+            current_desired_position_counter = obj.desired_position_counter;
             while 1
                 
                 %compute current endeffektor pos
@@ -111,15 +112,17 @@ classdef robotArm < handle
                 
                 %stop when position is in tolerance
                 if (distance < tolerance)
-                    obj.robot_busy = 0;
                     disp("Desired Endeffetor Position Reached");
                     break;
                 end
                 
                 %Stop when max time has passed
                 if (t>max_convergence_time)
-                    obj.robot_busy = 0;
                     disp("Did not converge in time");
+                    break;
+                end
+                
+                if current_desired_position_counter < obj.desired_position_counter
                     break;
                 end
                 
@@ -365,18 +368,18 @@ classdef robotArm < handle
         
         function pointClickCallback(obj,~, ~,~)
             %A callback when the workspace figure is clicked
+            
+            %increment desired position counter
+            obj.desired_position_counter = obj.desired_position_counter + 1;
     
             pt = get(gca,'CurrentPoint');
             fprintf('Clicked: %.1f %.1f\n', pt(1,1), pt(1,2));
-            if ~ obj.robot_busy
-                if obj.control_mode
-                        obj.setEndeffektorPosition_P_Controller(pt(1,1),pt(1,2),15); %P Mode
-                else
-                        obj.setEndeffektorPosition_Analytic(pt(1,1),pt(1,2)); %Analytical mode
-                end
+            if obj.control_mode
+                    obj.setEndeffektorPosition_P_Controller(pt(1,1),pt(1,2),15); %P Mode
             else
-                disp("Robot busy");
+                    obj.setEndeffektorPosition_Analytic(pt(1,1),pt(1,2)); %Analytical mode
             end
+
         end
         
          %% Plotting Methods
