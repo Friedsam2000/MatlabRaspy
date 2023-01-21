@@ -12,6 +12,7 @@ classdef robotArm < handle
         workspace_figure = struct("WindowState",'closed');
         raspberry_pi = 0;
         desired_position_counter = 0;
+        config_switched = 0;
 
     end 
     
@@ -101,6 +102,8 @@ classdef robotArm < handle
             
             %get current desired position count
             current_desired_position_counter = obj.desired_position_counter;
+            
+
             while 1
                 
                 %compute current endeffektor pos
@@ -134,7 +137,37 @@ classdef robotArm < handle
                         
                 %Convert to Joint Space
                 J = obj.getJacobian();  
+                
+                
+                %Check if the back_angle is near 0
+                
+                
+                if obj.config_switched == 0 && obj.q(1) <=  deg2rad((obj.min_angles.back_servo + 5))
+                    
+                    %switch configuration once
+                    disp("switched config");
+                    obj.setAngleFront(-rad2deg(obj.q(2)));
+                    
+                    obj.config_switched = 1;
+                    
+                end
+                
+                if obj.config_switched == 1 && obj.q(1) > deg2rad((obj.max_angles.back_servo - 5))
+                    
+                    %switch again once
+                    disp("switch config");
+                    obj.setAngleFront(-rad2deg(obj.q(2)));
+                    
+                    obj.config_switched = 0;
+
+                    
+                end
+                
+                
                 q_dot = pinv(J) * x_dot; %Desired joint space velocity
+
+                
+                
                 
                 %Set the updated Angles by integrating the desired joint
                 %space velocity
