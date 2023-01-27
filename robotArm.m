@@ -26,7 +26,7 @@ classdef robotArm < handle
     %% Settable Properties
     properties (SetAccess=public, GetAccess=public, SetObservable)
         
-        control_mode = 1; % 0 = Analytic ; 1 = P Controller with Jacobian
+        control_mode = 0; % 0 = Analytic ; 1 = P Controller with Jacobian
         offsets = struct("back_servo",0,"front_servo",0); % the angular offsets (deg) for both servos, configure at start
 
     end
@@ -135,13 +135,12 @@ classdef robotArm < handle
                 %P Controller
                 x_dot = P*position_error; %Desired task space velocity
                         
-                %Convert to Joint Space
+                %Get the jacobian
                 J = obj.getJacobian();  
                 
                 
-                %Check if the back_angle is near 0
-                
-                
+                %Check if the back_angle is near 0, switch to alternative
+                %configuration
                 if obj.config_switched == 0 && obj.q(1) <=  deg2rad((obj.min_angles.back_servo + 5))
                     
                     %switch configuration once
@@ -152,22 +151,21 @@ classdef robotArm < handle
                     
                 end
                 
+                % if the back_angle is not near 0, switch back to starting
+                % configuration
                 if obj.config_switched == 1 && obj.q(1) > deg2rad((obj.max_angles.back_servo - 5))
                     
                     %switch again once
                     disp("switch config");
                     obj.setAngleFront(-rad2deg(obj.q(2)));
                     
-                    obj.config_switched = 0;
-
-                    
+                    obj.config_switched = 0;          
                 end
                 
                 
+                %Convert desired velocities to joint space
                 q_dot = pinv(J) * x_dot; %Desired joint space velocity
 
-                
-                
                 
                 %Set the updated Angles by integrating the desired joint
                 %space velocity
