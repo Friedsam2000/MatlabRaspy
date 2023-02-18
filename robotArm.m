@@ -64,8 +64,8 @@ classdef robotArm < handle
                     
                     fprintf("--------------------------------------------------------------------------------------------------------------\n");
                     obj.calculateWorkspace;
-                    obj.setAngleBack(rad2deg(pi/3));
-                    obj.setAngleFront(rad2deg(pi/3));
+                    obj.setAngleBack(rad2deg(pi/3),1);
+                    obj.setAngleFront(rad2deg(pi/3),1);
                     disp("Set initial position (non singularity): q = [pi/3; pi/3];");
                     obj.plotRobotInWorkspace;
               else
@@ -145,7 +145,7 @@ classdef robotArm < handle
                     
                     %switch configuration once
                     disp("switched config");
-                    obj.setAngleFront(-rad2deg(obj.q(2)));
+                    obj.setAngleFront(-rad2deg(obj.q(2)),1);
                     
                     obj.config_switched = 1;
                     
@@ -157,7 +157,7 @@ classdef robotArm < handle
                     
                     %switch again once
                     disp("switch config");
-                    obj.setAngleFront(-rad2deg(obj.q(2)));
+                    obj.setAngleFront(-rad2deg(obj.q(2)),1);
                     
                     obj.config_switched = 0;          
                 end
@@ -169,8 +169,8 @@ classdef robotArm < handle
                 
                 %Set the updated Angles by integrating the desired joint
                 %space velocity
-                obj.setAngleBack(rad2deg(obj.q(1)+dt*q_dot(1)));
-                obj.setAngleFront(rad2deg(obj.q(2)+dt*q_dot(2)));
+                obj.setAngleBack(rad2deg(obj.q(1)+dt*q_dot(1)),1);
+                obj.setAngleFront(rad2deg(obj.q(2)+dt*q_dot(2)),1);
                     
                 %Propagate real and simulated time
                 pause(dt);
@@ -178,7 +178,6 @@ classdef robotArm < handle
                 
                 %Update Plot
                 updateRobotInPlot(obj)
-
             end
 
         end
@@ -200,12 +199,12 @@ classdef robotArm < handle
             if rad2deg(q_1_calc(1)) > obj.max_angles.back_servo || rad2deg(q_1_calc(1)) < obj.min_angles.back_servo || rad2deg(q_1_calc(2)) > obj.max_angles.front_servo || rad2deg(q_1_calc(2)) < obj.min_angles.front_servo
                 % use q_2 instead (second solution to IK
                 disp("using alterative solution");
-                obj.setAngleFront(rad2deg(q_2_calc(2)));
-                obj.setAngleBack(rad2deg(q_2_calc(1)));
+                obj.setAngleFront(rad2deg(q_2_calc(2)),1);
+                obj.setAngleBack(rad2deg(q_2_calc(1)),1);
             else
                 % use q_1
-                obj.setAngleFront(rad2deg(q_1_calc(2)));
-                obj.setAngleBack(rad2deg(q_1_calc(1)));
+                obj.setAngleFront(rad2deg(q_1_calc(2)),1);
+                obj.setAngleBack(rad2deg(q_1_calc(1)),1);
             end
 
             updateRobotInPlot(obj)
@@ -224,6 +223,77 @@ classdef robotArm < handle
                 
             end
             
+        end
+        
+        
+        function obj = setAngleFront(obj, angle,varargin)
+
+            
+            %this function tries to set the angle of the front servo and
+            %sets q(2)
+                   
+            
+            %check if commanded angle is within bounds
+            if angle > obj.max_angles.front_servo || angle < obj.min_angles.front_servo
+                disp("Warning: Front Angle out of bounds, limiting");
+            end
+            
+            %subtract offset
+            angle_with_offset = angle - obj.offsets.front_servo;
+
+            %min max the angle_with_offset to max range
+            angle_with_offset = min(max(angle_with_offset,obj.min_angles.front_servo),obj.max_angles.front_servo);            %min max the angle to max range
+           
+            %min max the angle to max range
+            angle = min(max(angle,obj.min_angles.front_servo),obj.max_angles.front_servo);
+            
+            %set property
+            obj.q(2) = deg2rad(angle);
+
+            %write position to servo if connected(convert angle for servo)
+            if ~isnumeric(obj.back_servo)
+                obj.front_servo.writePosition(90-angle_with_offset);
+            end
+            
+            %Updates Plot unless varargin is specified
+            if isempty(varargin)
+                obj.updateRobotInPlot;
+            end
+            
+        end
+        
+        function obj = setAngleBack(obj, angle,varargin)
+            %DOES NOT UPDATE PLOT ITSELF
+            %this function tries to set the angle of the back servo with offset and
+            %sets q(1)
+            
+            %check if  angle is within bounds, give warning
+            if angle > obj.max_angles.back_servo || angle < obj.min_angles.back_servo
+                disp("Warning: Back Angle out of bounds, limiting");
+            end
+
+            %subtract offset
+            angle_with_offset = angle - obj.offsets.back_servo;
+
+            %min max the angle_with_offset to max range
+            angle_with_offset = min(max(angle_with_offset,obj.min_angles.back_servo),obj.max_angles.back_servo);
+
+            %min max the angle to max range
+            angle = min(max(angle,obj.min_angles.back_servo),obj.max_angles.back_servo);
+            
+            %set property
+            obj.q(1) = deg2rad(angle);
+
+            %write position to servo if connected
+            if ~isnumeric(obj.back_servo)
+                obj.back_servo.writePosition(angle_with_offset);
+            end
+            
+            %Updates Plot unless varargin is specified
+            if isempty(varargin)
+                obj.updateRobotInPlot;
+            end
+    
         end
                
     end
@@ -302,67 +372,7 @@ classdef robotArm < handle
         end
 
 
-        function obj = setAngleFront(obj, angle)
-            %DOES NOT UPDATE PLOT ITSELF
-            %this function tries to set the angle of the front servo and
-            %sets q(2)
-                   
-            
-            %check if commanded angle is within bounds
-            if angle > obj.max_angles.front_servo || angle < obj.min_angles.front_servo
-                disp("Warning: Front Angle out of bounds, limiting");
-            end
-            
-            %subtract offset
-            angle_with_offset = angle - obj.offsets.front_servo;
 
-            %min max the angle_with_offset to max range
-            angle_with_offset = min(max(angle_with_offset,obj.min_angles.front_servo),obj.max_angles.front_servo);            %min max the angle to max range
-           
-            %min max the angle to max range
-            angle = min(max(angle,obj.min_angles.front_servo),obj.max_angles.front_servo);
-            
-            %set property
-            obj.q(2) = deg2rad(angle);
-
-            %write position to servo if connected(convert angle for servo)
-            if ~isnumeric(obj.back_servo)
-                obj.front_servo.writePosition(90-angle_with_offset);
-            end
-            
-    
-        end
-        
-        function obj = setAngleBack(obj, angle)
-            %DOES NOT UPDATE PLOT ITSELF
-            %this function tries to set the angle of the back servo with offset and
-            %sets q(1)
-            
-            %check if  angle is within bounds, give warning
-            if angle > obj.max_angles.back_servo || angle < obj.min_angles.back_servo
-                disp("Warning: Back Angle out of bounds, limiting");
-            end
-
-            %subtract offset
-            angle_with_offset = angle - obj.offsets.back_servo;
-
-            %min max the angle_with_offset to max range
-            angle_with_offset = min(max(angle_with_offset,obj.min_angles.back_servo),obj.max_angles.back_servo);
-
-            %min max the angle to max range
-            angle = min(max(angle,obj.min_angles.back_servo),obj.max_angles.back_servo);
-            
-            %set property
-            obj.q(1) = deg2rad(angle);
-
-            %write position to servo if connected
-            if ~isnumeric(obj.back_servo)
-                obj.back_servo.writePosition(angle_with_offset);
-            end
-            
-
-    
-        end
         
         function obj = calculateWorkspace(obj)
             %this function calculates the boundary of all points that the
@@ -406,7 +416,7 @@ classdef robotArm < handle
             pt = get(gca,'CurrentPoint');
             fprintf('Clicked: %.1f %.1f\n', pt(1,1), pt(1,2));
             if obj.control_mode
-                    obj.setEndeffektorPosition_P_Controller(pt(1,1),pt(1,2),15); %P Mode
+                    obj.setEndeffektorPosition_P_Controller(pt(1,1),pt(1,2),25); %P Mode
             else
                     obj.setEndeffektorPosition_Analytic(pt(1,1),pt(1,2)); %Analytical mode
             end
@@ -501,7 +511,7 @@ classdef robotArm < handle
         end
 
         function updateRobotInPlot(obj)
-            
+                        
             %Position of first joint 
             x_1 = obj.length_back*cos(obj.q(1));
             y_1 = obj.length_back*sin(obj.q(1));
