@@ -255,7 +255,8 @@ classdef robotArm < handle
                 obj.front_servo.writePosition(90-angle_with_offset);
             end
             
-            %Updates Plot unless varargin is specified
+            %Update Plot when the call is coming from the user and not from
+            %another function
             if isempty(varargin)
                 obj.updateRobotInPlot;
             end
@@ -289,7 +290,8 @@ classdef robotArm < handle
                 obj.back_servo.writePosition(angle_with_offset);
             end
             
-            %Updates Plot unless varargin is specified
+            %Update Plot when the call is coming from the user and not from
+            %another function
             if isempty(varargin)
                 obj.updateRobotInPlot;
             end
