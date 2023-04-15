@@ -2,6 +2,14 @@ classdef robotArm < handle
     
     %% Private Properties
     properties (SetAccess=protected, GetAccess=protected)
+        % Set the IP of the raspi
+        % ip = '169.254.215.7'; % 11
+        % ip = '169.254.162.237'; % 04
+        % ip = '169.254.146.104'; % 06
+        % ip = '169.254.212.152'; % 15
+        % ip = '169.254.82.77'; % 10
+        % ip = '169.254.212.196'; % 07
+        % ip = '169.254.232.81'; % 03
         front_servo = 0;
         back_servo = 0;
         min_angles = struct("back_servo",1,"front_servo",-89); % the minimum servo angles
@@ -36,20 +44,20 @@ classdef robotArm < handle
         %% Constructor
             
         function obj = robotArm(evtobj)
-            obj.connectRaspi();
+            obj.connectRaspi(obj.ip);
             addlistener(obj,'control_mode','PostSet',@(src,evt) obj.ModeChangedCallback(src,evt));
         end
 
         
         
         %% Setup
-        function obj = connectRaspi(obj)
+        function obj = connectRaspi(obj,ip)
             %This function tries to connect to the raspi and sets r,
             %front_servo, back_servo
               if isnumeric(obj.raspberry_pi)
                     disp("raspi not connected, trying to connect...");
                     try
-                    obj.raspberry_pi = raspi;            
+                    obj.raspberry_pi = raspi(ip,'pi','raspberry');            
                     obj.front_servo = servo(obj.raspberry_pi,23);
                     obj.back_servo = servo(obj.raspberry_pi,22);
                     obj.front_servo.MaxPulseDuration = 0.00250;
