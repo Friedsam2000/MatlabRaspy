@@ -157,28 +157,7 @@ classdef robotArm < handle
                     
                     %switch configuration once
                     disp("switched config");
-
-
-                    % Switch the sign of the front angle with a ramp of 10
-                    % steps
-                    % Define the current front angle and desired front angle
-                    current_front_angle = obj.q(2);
-                    desired_front_angle = -current_front_angle;
-                    
-                    % Define the number of steps
-                    num_steps = 10;
-                    
-                    % Calculate the step size
-                    step_size = (desired_front_angle - current_front_angle) / (num_steps - 1);
-                    
-                    % Create the for loop with the calculated step size
-                    for step = 0:(num_steps-1)
-                        angle = current_front_angle + step * step_size;
-                        obj.setAngleFront(rad2deg(angle));
-                        pause(dt);
-
-                    end
-
+                    obj.setAngleFront(-rad2deg(obj.q(2)),1);
                     
                     obj.config_switched = 1;
                     
