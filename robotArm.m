@@ -10,6 +10,7 @@ classdef robotArm < handle
         % ip = '169.254.82.77'; % 10
         % ip = '169.254.212.196'; % 07
         % ip = '169.254.232.81'; % 03
+        ip = '169.254.199.208'; 
         front_servo = 0;
         back_servo = 0;
         min_angles = struct("back_servo",1,"front_servo",-89); % the minimum servo angles

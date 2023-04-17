@@ -14,9 +14,7 @@ https://wiki.rbg.tum.de/Informatik/Helpdesk/MatlabInstallieren
 https://de.mathworks.com/help/supportpkg/raspberrypiio/ug/install-support-for-raspberry-pi-hardware.html
 
 
-Sofern du nicht mehr teilnehmen kannst, gebe uns bitte rechtzeitig Bescheid.
-
-Und solltest du in der Zwischenzeit Fragen haben, kannst du dich gerne jederzeit an uns wenden.
+Sofern du nicht mehr teilnehmen kannst, gebe uns bitte rechtzeitig Bescheid. Und solltest du in der Zwischenzeit Fragen haben, kannst du dich gerne jederzeit an uns wenden.
 
 
 Mit freundlichen Grüßen,
