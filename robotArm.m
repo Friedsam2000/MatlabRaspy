@@ -10,7 +10,8 @@ classdef robotArm < handle
         % ip = '169.254.82.77'; % 10
         % ip = '169.254.212.196'; % 07
         % ip = '169.254.232.81'; % 03
-        ip = '169.254.199.208'; 
+        ip = '169.254.199.208'; %Paolas raspi
+
         front_servo = 0;
         back_servo = 0;
         min_angles = struct("back_servo",1,"front_servo",-89); % the minimum servo angles
@@ -22,7 +23,7 @@ classdef robotArm < handle
         raspberry_pi = 0;
         desired_position_counter = 0;
         config_switched = 0;
-
+        simulation_mode = 1;
     end 
     
     %% Read-Only Properties
@@ -56,20 +57,24 @@ classdef robotArm < handle
             %This function tries to connect to the raspi and sets r,
             %front_servo, back_servo
               if isnumeric(obj.raspberry_pi)
+                  if  ~obj.simulation_mode
                     disp("raspi not connected, trying to connect...");
                     try
-                    obj.raspberry_pi = raspi(ip,'pi','raspberry');            
-                    obj.front_servo = servo(obj.raspberry_pi,23);
-                    obj.back_servo = servo(obj.raspberry_pi,22);
-                    obj.front_servo.MaxPulseDuration = 0.00250;
-                    obj.front_servo.MinPulseDuration = 0.0005;
-                    obj.back_servo.MaxPulseDuration = 0.00250;
-                    obj.back_servo.MinPulseDuration = 0.0005;    
+                        obj.raspberry_pi = raspi(ip,'pi','raspberry');            
+                        obj.front_servo = servo(obj.raspberry_pi,23);
+                        obj.back_servo = servo(obj.raspberry_pi,22);
+                        obj.front_servo.MaxPulseDuration = 0.00250;
+                        obj.front_servo.MinPulseDuration = 0.0005;
+                        obj.back_servo.MaxPulseDuration = 0.00250;
+                        obj.back_servo.MinPulseDuration = 0.0005;    
                     
                     catch ME
                         disp(ME.message)
                         disp("Could not connect to raspi, running in simulation mode, run connectRaspi if you want to connect.");
                     end
+                  else
+                      disp("Simulation mode! Didn't try to connect to real raspi");
+                  end
                     
                     fprintf("--------------------------------------------------------------------------------------------------------------\n");
                     obj.calculateWorkspace;
@@ -101,15 +106,16 @@ classdef robotArm < handle
             tolerance = 0.1; %cm
             
             %Defines the control loop frequency f = 1/dt
-            dt = 0.01; %s
-            
-            %Defines the max time befor it aborts
-            max_convergence_time = 0.5;
+            dt = 0.1; %s
+           
             
             %Control loop
             t = 0;
             
-            %get current desired position count
+            %get current desired position count --> this makes sure that
+            %when the robot is still moving and the next positoin is
+            %commanded, that the robot will move to the newest desired
+            %position and not continue to the old desired position
             current_desired_position_counter = obj.desired_position_counter;
             
 
@@ -118,27 +124,24 @@ classdef robotArm < handle
                 %compute current endeffektor pos
                 [x_Cur, y_Cur] = obj.forwardKinematics(obj.q);
                 
-                %compute distance
+                %compute distance to desired position
                 distance = sqrt((x_Cur-x_EE)^2+(y_Cur-y_EE)^2);
                 
                 
-                %stop when position is in tolerance
+                %stop when desired position is reached within tolerance
                 if (distance < tolerance)
                     disp("Desired Endeffetor Position Reached");
                     break;
                 end
                 
-                %Stop when max time has passed
-                if (t>max_convergence_time)
-                    disp("Did not converge in time");
-                    break;
-                end
                 
+                % If a new position is desired while the robot is still
+                % moving to the old position --> break
                 if current_desired_position_counter < obj.desired_position_counter
                     break;
                 end
                 
-                %Calculate the Control error
+                %Calculate the position error
                 position_error = [x_EE-x_Cur; y_EE-y_Cur];
                 
                 %P Controller
@@ -427,7 +430,7 @@ classdef robotArm < handle
             pt = get(gca,'CurrentPoint');
             fprintf('Clicked: %.1f %.1f\n', pt(1,1), pt(1,2));
             if obj.control_mode
-                    obj.setEndeffektorPosition_P_Controller(pt(1,1),pt(1,2),25); %P Mode
+                    obj.setEndeffektorPosition_P_Controller(pt(1,1),pt(1,2),2); %P Mode
             else
                     obj.setEndeffektorPosition_Analytic(pt(1,1),pt(1,2)); %Analytical mode
             end
