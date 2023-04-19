@@ -4,13 +4,13 @@ classdef robotArm < handle
     properties (SetAccess=protected, GetAccess=protected)
         % Set the IP of the raspi
         % ip = '169.254.215.7'; % 11
-        % ip = '169.254.162.237'; % 04
+        ip = '169.254.162.237'; % 04
         % ip = '169.254.146.104'; % 06
         % ip = '169.254.212.152'; % 15
         % ip = '169.254.82.77'; % 10
         % ip = '169.254.212.196'; % 07
         % ip = '169.254.232.81'; % 03
-        % ip = '169.254.199.208'; %12
+        % ip = '169.254.199.208'; % 12
 
         front_servo = 0;
         back_servo = 0;
@@ -23,7 +23,7 @@ classdef robotArm < handle
         raspberry_pi = 0;
         desired_position_counter = 0;
         config_switched = 0;
-        simulation_mode = 1;
+        simulation_mode = 0;
     end 
     
     %% Read-Only Properties
@@ -36,7 +36,7 @@ classdef robotArm < handle
     %% Settable Properties
     properties (SetAccess=public, GetAccess=public, SetObservable)
         
-        control_mode = 0; % 0 = Analytic ; 1 = P Controller with Jacobian
+        ik_mode = 0; % 0 = Analytic ; 1 = Jacobian (with P-Controller)
         offsets = struct("back_servo",0,"front_servo",0); % the angular offsets (deg) for both servos, configure at start
 
     end
@@ -47,7 +47,7 @@ classdef robotArm < handle
             
         function obj = robotArm(evtobj)
             obj.connectRaspi(obj.ip);
-            addlistener(obj,'control_mode','PostSet',@(src,evt) obj.ModeChangedCallback(src,evt));
+            addlistener(obj,'ik_mode','PostSet',@(src,evt) obj.ModeChangedCallback(src,evt));
         end
 
         
@@ -90,7 +90,7 @@ classdef robotArm < handle
         end
         
         %% Interaction  
-        function setEndeffektorPosition_P_Controller(obj,x_EE,y_EE,P)
+        function setEndeffektorPosition_Jacobian(obj,x_EE,y_EE,P)
             %Set the endeffektor Position of the robot using the pinv of jacobian (experimental)
             % Using a P Controller
             % This method does not require an analytical solution to the
@@ -236,8 +236,7 @@ classdef robotArm < handle
             end
             
         end
-        
-        
+                
         function obj = setAngleFront(obj, angle,varargin)
 
             
@@ -385,9 +384,6 @@ classdef robotArm < handle
             obj.updateRobotInPlot;
         end
 
-
-
-        
         function obj = calculateWorkspace(obj)
             %this function calculates the boundary of all points that the
             %endeffektor can reach, sets workspace
@@ -429,8 +425,8 @@ classdef robotArm < handle
     
             pt = get(gca,'CurrentPoint');
             fprintf('Clicked: %.1f %.1f\n', pt(1,1), pt(1,2));
-            if obj.control_mode
-                    obj.setEndeffektorPosition_P_Controller(pt(1,1),pt(1,2),2); %P Mode
+            if obj.ik_mode
+                    obj.setEndeffektorPosition_Jacobian(pt(1,1),pt(1,2),2); %P Mode
             else
                     obj.setEndeffektorPosition_Analytic(pt(1,1),pt(1,2)); %Analytical mode
             end
@@ -481,18 +477,15 @@ classdef robotArm < handle
             %Print joint angles
             caption = sprintf('q_1 = %.1f °, q_2 = %.1f °       x_E_E = %.2f cm, y_E_E = %.2f cm', rad2deg(obj.q(1)), rad2deg(obj.q(2)), x_EE, y_EE);
             
-            if obj.control_mode == 0
-                add_caption = '        Controller: Analytic Controller';
+            if obj.ik_mode == 0
+                add_caption = '        Inv. Kin. : Analytic';
             else
-                add_caption = '        Controller: P Controller';
+                add_caption = '        Inv. Kin. : Jacobian';
             end
             
             caption = strcat(caption, add_caption);
             
             title(caption);
-            
-            
-  
             
             %Print text
             text(0, -0.9*obj.length_back, 'Click in the workspace to move the robot', ...
@@ -551,10 +544,10 @@ classdef robotArm < handle
  
             caption = sprintf('q_1 = %.1f °, q_2 = %.1f °       x_E_E = %.2f cm, y_E_E = %.2f cm', rad2deg(obj.q(1)), rad2deg(obj.q(2)), x_EE, y_EE);
             
-            if obj.control_mode == 0
-                add_caption = '        Controller: Analytic Controller';
+            if obj.ik_mode == 0
+                add_caption = '        Inv. Kin.: Analytic';
             else
-                add_caption = '        Controller: P Controller';
+                add_caption = '        Inv. Kin.: Jacobian';
             end
             
             caption = strcat(caption, add_caption);
