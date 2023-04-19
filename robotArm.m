@@ -46,6 +46,9 @@ classdef robotArm < handle
         %% Constructor
             
         function obj = robotArm(evtobj)
+            
+            close all
+          
             obj.connectRaspi(obj.ip);
             addlistener(obj,'ik_mode','PostSet',@(src,evt) obj.ModeChangedCallback(src,evt));
         end

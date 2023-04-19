@@ -10,7 +10,7 @@ function [x_EE, y_EE] = forwardKinematics(angle_back,angle_front)
             %cosine
             
 
-            %% TODO: Derive a trignometic calculation of the endeffector
+            %% TODO: Derive a trigonometric calculation of the endeffector
             %position (x_EE, y_EE). Checkout the coordinate system in the
             %live script
 

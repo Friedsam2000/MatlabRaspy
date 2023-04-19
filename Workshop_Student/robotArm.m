@@ -2,7 +2,6 @@ classdef robotArm < handle
     
     %% Private Properties
     properties (SetAccess=protected, GetAccess=protected)
-        
         % Set the IP of the raspi
         % ip = '169.254.215.7'; % 11
         ip = '169.254.162.237'; % 04
@@ -47,6 +46,9 @@ classdef robotArm < handle
         %% Constructor
             
         function obj = robotArm(evtobj)
+            
+            close all
+          
             obj.connectRaspi(obj.ip);
             addlistener(obj,'ik_mode','PostSet',@(src,evt) obj.ModeChangedCallback(src,evt));
         end
