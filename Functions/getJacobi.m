@@ -15,7 +15,7 @@ function J = getJacobi(angle_back,angle_front)
     %% TODO: Perform a partial differentiation with respect to q = [q1,q2];
     % J = ...
      J = [  -(L1*sin(q1) + L2*sin(q1 + q2)), -L2*sin(q1 + q2);
-              L1*cos(q2) + L2*cos(q1 + q2),  L2*cos(q1 + q2)];
+              L1*cos(q1) + L2*cos(q1 + q2),  L2*cos(q1 + q2)];
 
      %% END TODO
 
