@@ -1,0 +1,20 @@
+Erinnerung: RaspberryPi mit MATLAB Workshop
+
+Hallo,
+
+mit dieser E-Mail möchten wir dich daran erinnern, dass du für den RaspberryPi mit MATLAB Workshop Workshop angemeldet bist. Sofern du nicht mehr teilnehmen kannst, gebe uns bitte Bescheid. 
+
+Veranstaltungsinformationen:
+Mittwoch, 26. April 2023
+16:00 - 19:00 Uhr
+Raum MW2250 B8 (im IWB-Seminarraum, Fakultät für Maschinenbau der TUM in Garching).
+
+Vergiss nicht deinen Computer mitzubringen, auf dem die MATLAB Version 2023a und das "MATLAB Support Package for Raspberry Pi Hardware" bereits installiert sein muss. Diese Links können dir dabei helfen:
+https://wiki.rbg.tum.de/Informatik/Helpdesk/MatlabInstallieren
+https://de.mathworks.com/help/supportpkg/raspberrypiio/ug/install-support-for-raspberry-pi-hardware.html
+
+Wenn du Probleme mit der Installation von MATLAB hast, werden wir ab 15:30 Uhr im Raum sein. Du kannst auch früher kommen, damit wir dir helfen können.
+
+
+Mit freundlichen Grüßen,
+Stud|Lab Team
