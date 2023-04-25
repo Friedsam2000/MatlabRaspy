@@ -4,7 +4,7 @@ classdef robotArm < handle
     properties (SetAccess=protected, GetAccess=protected)
         % Set the IP of the raspi
         % ip = '169.254.215.7'; % 11
-        ip = '169.254.162.237'; % 04
+        % ip = '169.254.162.237'; % 04
         % ip = '169.254.146.104'; % 06
         % ip = '169.254.212.152'; % 15
         % ip = '169.254.82.77'; % 10
