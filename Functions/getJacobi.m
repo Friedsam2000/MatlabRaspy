@@ -7,7 +7,7 @@ function J = getJacobi(angle_back,angle_front)
     q2 = deg2rad(angle_front);
 
 
-    %Remember the forward kinematic euations are:
+    %Remember the forward kinematic equations are:
     % x_EE = L1 * cos(q1) + L2 * cos(q1 + q2);
     % y_EE = L1 * sin(q1) + L2 * sin(q1 + q2);
 
