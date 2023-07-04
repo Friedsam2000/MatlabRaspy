@@ -5,7 +5,7 @@ classdef robotArm < handle
 
         % Uncomment the IP of the raspi according to the label on the raspberry
         % PI's case
-        % ip = '169.254.215.7'; % 11
+        ip = '169.254.215.7'; % 11
         % ip = '169.254.162.237'; % 04
         % ip = '169.254.146.104'; % 06
         % ip = '169.254.212.152'; % 15
