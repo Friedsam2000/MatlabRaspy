@@ -13,3 +13,11 @@ This will create a robot object that tries to connect to the real connected robo
 **Workshop.mlx** (located in Workshop_Student folder) --> This is the workshop livescript
 
 *Note:* The functions folder needs to be added on the MATLAB PATH (usually done automatically in the scripts)
+
+
+Folder Structure:
+
+- Functions: Contains Matlab Functions used by robotArm.m and Workshop.mlx
+- Robot_Parts: Contains all neccessary files for 3D printing and assembly in Autodesk Inventor
+- Simscape/slprj: Independent Simulink workshop
+- Workshop_Student: Contains a copy of robotArm.m/Workshop.mlx alsongside the Functions folder for distribution to the students
